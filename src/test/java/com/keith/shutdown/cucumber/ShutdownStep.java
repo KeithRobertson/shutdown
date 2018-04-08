@@ -1,16 +1,35 @@
 package com.keith.shutdown.cucumber;
 
+import com.keith.shutdown.Shutdown;
+import com.keith.shutdown.os.DummyShutdownInvoker;
 import cucumber.api.java8.En;
 
+import java.time.Instant;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class ShutdownStep implements En {
+    private DummyShutdownInvoker shutdownInvoker;
+    private Shutdown shutdown;
+    private Instant startTime;
+    private int delay;
+
     public ShutdownStep() {
-        Given("^I run shutdown with an argument of (\\d+) seconds$", (Integer arg1) -> {
+        When("^I run shutdown with an argument of (\\d+) seconds$", (Integer totalDelay) -> {
+            this.delay = totalDelay;
+            this.startTime = Instant.now();
+            this.shutdownInvoker = new DummyShutdownInvoker();
+            this.shutdown = new Shutdown(shutdownInvoker);
+            shutdown.start(this.delay);
         });
 
-        When("^(\\d+) seconds have passed$", (Integer arg1) -> {
-        });
+        Then("^windows shutdown is invoked after (\\d+) seconds$", (Integer expectedDelay) -> {
+            Instant absoluteCorrectTime = this.startTime.plusSeconds(expectedDelay);
+            Instant minimumCorrectTime = absoluteCorrectTime.minusSeconds(1);
+            Instant maximumCorrectTime = absoluteCorrectTime.plusSeconds(1);
 
-        Then("^windows shutdown is invoked$", () -> {
+            Instant actualDelay = this.shutdownInvoker.getDelay();
+            assertTrue(actualDelay.isAfter(minimumCorrectTime) && actualDelay.isBefore(maximumCorrectTime));
         });
     }
 }
